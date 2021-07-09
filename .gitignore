@@ -25,3 +25,6 @@ Makefile
 .vs/
 build-*/
 src/host/data/*.json
+scripts/__pycache__/
+obj/
+.vscode/
