@@ -3,7 +3,7 @@ import subprocess
 import platform
 import xml.etree.ElementTree as et
 import argparse
-import os.path
+import os, os.path
 def add_defs(path: str, defs: list[str]) -> int:
     tree = et.parse(path)
     root = tree.getroot()
@@ -20,6 +20,10 @@ def add_defs(path: str, defs: list[str]) -> int:
         element.text += constant
     tree.write(path)
     return 0
+def cleanup_console(directory: str):
+    os.unlink(os.path.join(directory, "Program.cs"))
+def cleanup_classlib(directory: str):
+    os.unlink(os.path.join(directory, "Class1.cs"))
 def run(args: list[str]) -> int:
     if platform.system() == "Windows":
         print("This script should not be run on windows!")
@@ -35,6 +39,15 @@ def run(args: list[str]) -> int:
     return_value = subprocess.call(["/usr/bin/env", "dotnet", "new", parsed_args.template, "-n", parsed_args.name, "-o", parsed_args.directory, "--force"])
     if return_value != 0:
         return return_value
+    cleanup_table = {
+        "console": cleanup_console,
+        "classlib": cleanup_classlib
+    }
+    try:
+        cleanup_table[parsed_args.template](parsed_args.directory)
+    except KeyError:
+        print("This template is currently not supported!")
+        return 1
     project_location = os.path.join(parsed_args.directory, parsed_args.name) + ".csproj"
     for name in parsed_args.reference or list[str]():
         return_value = subprocess.call(["/usr/bin/env", "dotnet", "add", project_location, "reference", name])

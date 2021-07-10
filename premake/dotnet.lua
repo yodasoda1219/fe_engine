@@ -21,10 +21,19 @@ function generate_dotnet_project(directory_path, name, template, definitions, re
     print(abs_rootdir)
     local abs_directory = path.getabsolute(path.join(abs_rootdir, directory_path))
     python_command = _OPTIONS["python-command"]
-    local command = 'bash -c "cd ' .. abs_rootdir .. ' && ' .. python_command .. ' -m scripts create-dotnet-project \\"' .. name .. '\\" \\"' .. abs_directory .. '\\" \\"' .. template .. '\\""'
+    local command = 'bash -c "cd ' .. abs_rootdir .. ' && ' .. python_command .. ' -m scripts create-dotnet-project \\"' .. name .. '\\" \\"' .. abs_directory .. '\\" \\"' .. template .. '\\"'
     for index in pairs(definitions) do
-        print(definitions[index])
+        local definition = definitions[index]
+        print("Adding definition: " .. definition)
+        command = command .. ' -d \\"' .. definition .. '\\"'
     end
+    for index in pairs(references) do
+        local ref = path.getabsolute(path.join(scriptdir, references[index]))
+        print("Adding reference: " .. ref)
+        command = command .. ' -r \\"' .. ref .. '\\"'
+    end
+    command = command .. '"'
+    print(command)
     os.execute(command) 
     return path.join(abs_directory, name) .. ".csproj"
 end
