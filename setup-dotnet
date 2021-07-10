@@ -1,9 +1,0 @@
-#!/bin/bash
-
-# export the runtime path
-source scripts/search-for-runtime.sh
-
-# set up the compiler ($PWD/bin/csc)
-source scripts/setup-sdk.sh
-
-echo ".NET Core has been successfully set up!"

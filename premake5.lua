@@ -6,6 +6,7 @@ newoption {
 }
 architecture_ = _OPTIONS["architecture"]
 include "premake/mono.lua"
+include "premake/dotnet.lua"
 default_mono_includedir = determine_mono_include(architecture_)
 default_mono_libdir = determine_mono_libdir(architecture_)
 function scandir(directory, pattern)
