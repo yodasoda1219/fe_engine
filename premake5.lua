@@ -296,6 +296,9 @@ project "MapDesigner"
         dependson {
             "MapDesigner-Internals"
         }
+        postbuildcommands {
+            '{COPY} "%{cfg.targetdir}/../MapDesigner-Internals/lib*" "%{cfg.targetdir}"'
+        }
 project "MapDesigner-Internals"
     location "src/MapDesigner/Internals"
     kind "SharedLib"
