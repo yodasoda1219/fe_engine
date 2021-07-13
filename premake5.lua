@@ -95,14 +95,6 @@ workspace "fe_engine"
             "26451",
             "26812"
         }
-    filter { "system:not windows", "language:C#" }
-        libdirs {
-            (os.getenv("DOTNET_SDK_PATH"))
-        }
-        links {
-            "System.Security.Permissions.dll"
-        }
-        iterate_dlls()
     filter "system:windows"
         defines {
             "FEENGINE_WINDOWS"
@@ -130,28 +122,28 @@ workspace "fe_engine"
         }
         optimize "on"
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-include "premake/dependencies"
+--include "premake/dependencies"
 group "engine"
 project "FEEngine"
     location "src/FEEngine"
-    kind "SharedLib"
-    language "C#"
-    csversion (cs_version)
-    framework (dotnet_framework_version)
-    clr "unsafe"
     targetdir ("bin/" .. outputdir .. "/%{prj.name}")
     objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-    files {
-        "src/%{prj.name}/**.cs",
-        _SCRIPT
-    }
-    links {
-        "Newtonsoft.Json"
-    }
     filter "system:windows"
-        links {
-            "System"
+        kind "SharedLib"
+        language "C#"
+        csversion (cs_version)
+        framework (dotnet_framework_version)
+        clr "unsafe"
+        files {
+            "src/%{prj.name}/**.cs",
+            _SCRIPT
         }
+        links {
+            "System",
+            "Newtonsoft.Json"
+        }
+    filter "action:gmake*"
+        dotnet_project (generate_csharp_project("src/FEEngine", "FEEngine", "classlib", {}, {"vendor/submodules/Newtonsoft.Json/Src/Newtonsoft.Json/Newtonsoft.Json.csproj"}, ".", path.getdirectory(_SCRIPT)))
 project "host"
     location "src/host"
     kind "ConsoleApp"
@@ -175,11 +167,6 @@ project "host"
     defines {
         'MONO_CS_LIBDIR="%{libdirs_table.mono}"'
     }
-    links {
-        "FEEngine",
-        "ExampleGame",
-        "Newtonsoft.Json"
-    }
     debugargs {
         "-df",
         "ExampleGame.exe",
@@ -189,9 +176,6 @@ project "host"
     filter "configurations:Debug"
         targetsuffix "-d"
         postbuildcommands {
-            '{MOVE} "%{cfg.targetdir}/FEEngine.dll" "."',
-            '{MOVE} "%{cfg.targetdir}/ExampleGame.exe" "."',
-            '{MOVE} "%{cfg.targetdir}/Newtonsoft.Json.dll" "."',
             '{COPY} "%{dotnet_assembly_path}/%{dotnet_framework_version}/System.dll" "."',
             '{COPY} "%{dotnet_assembly_path}/%{dotnet_framework_version}/System.Core.dll" "."',
             '{COPY} "%{dotnet_assembly_path}/%{dotnet_framework_version}/System.Data.dll" "."',
@@ -211,10 +195,25 @@ project "host"
             '{COPY} "%{dotnet_assembly_path}/%{dotnet_framework_version}/System.Xml.dll" "%{cfg.targetdir}"',
             '{COPY} "%{dotnet_assembly_path}/%{dotnet_framework_version}/System.Xml.Linq.dll" "%{cfg.targetdir}"',
         } 
+    filter { "configurations:Debug", "system:windows" }
+        postbuildcommands {
+            '{MOVE} "%{cfg.targetdir}/FEEngine.dll" "."',
+            '{MOVE} "%{cfg.targetdir}/ExampleGame.exe" "."',
+            '{MOVE} "%{cfg.targetdir}/Newtonsoft.Json.dll" "."',
+        }
+    filter { "configurations:Debug", "system:not windows" }
+        postbuildcommands {
+            '{COPY} "%{cfg.targetdir}/../examples/ExampleGame/FEEngine.dll" "."',
+            '{COPY} "%{cfg.targetdir}/../examples/ExampleGame/ExampleGame.dll" "."',
+            '{COPY} "%{cfg.targetdir}/../examples/ExampleGame/Newtonsoft.Json.dll" "."',
+        }
     filter "system:windows"
         links {
+            "FEEngine",
+            "ExampleGame",
+            "Newtonsoft.Json",
             "mono-2.0-sgen.lib"
-        }
+        }    
         defines {
             "_CRT_SECURE_NO_WARNINGS"
         }
@@ -224,6 +223,11 @@ project "host"
     filter "system:not windows"
         links {
             "monosgen-2.0"
+        }
+        dependson {
+            "FEEngine",
+            "ExampleGame",
+            "Newtonsoft.Json"
         }
     filter "system:macosx"
         links {
@@ -244,50 +248,53 @@ group ""
 group "tools"
 project "SchemaGenerator"
     location "src/SchemaGenerator"
-    kind "ConsoleApp"
-    language "C#"
-    csversion (cs_version)
-    framework (dotnet_framework_version)
     targetdir ("bin/" .. outputdir .. "/%{prj.name}")
     objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-    files {
-        "src/%{prj.name}/**.cs"
-    }
-    links {
-        "FEEngine",
-        "Newtonsoft.Json",
-        "Newtonsoft.Json.Schema"
-    }
     filter "system:windows"
+        kind "ConsoleApp"
+        language "C#"
+        csversion (cs_version)
+        framework (dotnet_framework_version)
+        files {
+            "src/%{prj.name}/**.cs"
+        }
         links {
+            "FEEngine",
+            "Newtonsoft.Json",
+            "Newtonsoft.Json.Schema",
             "System"
         }
+    filter "system:not windows"
+        dotnet_project (generate_csharp_project("src/SchemaGenerator", "SchemaGenerator", "console", {}, {"src/FEEngine/FEEngine.csproj", "vendor/submodules/Newtonsoft.Json.Schema/Src/Newtonsoft.Json.Schema/Newtonsoft.Json.Schema.csproj"}, ".", path.getdirectory(_SCRIPT)))
 project "MapDesigner"
     location "src/MapDesigner/Application"
-    kind "ConsoleApp"
-    language "C#"
-    clr "unsafe"
-    csversion (cs_version)
-    framework (dotnet_framework_version)
     targetdir ("bin/" .. outputdir .. "/%{prj.name}")
     objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
-    files {
-        "src/MapDesigner/Application/**.cs"
-    }
-    excludes {
-        "src/MapDesigner/Application/Platform/**.cs"
-    }
-    files {
-        "src/MapDesigner/Application/Platform/%{cfg.platform}/**.cs"
-    }
-    links {
-        "FEEngine",
-        "Newtonsoft.Json",
-        "MapDesigner-Internals"
-    }
     filter "system:windows"
+        kind "ConsoleApp"
+        language "C#"
+        clr "unsafe"
+        csversion (cs_version)
+        framework (dotnet_framework_version)
+        files {
+            "src/MapDesigner/Application/**.cs"
+        }
+        excludes {
+            "src/MapDesigner/Application/Platform/**.cs"
+        }
+        files {
+            "src/MapDesigner/Application/Platform/%{cfg.platform}/**.cs"
+        }
         links {
+            "FEEngine",
+            "Newtonsoft.Json",
+            "MapDesigner-Internals",
             "System"
+        }
+    filter "system:not windows"
+        dotnet_project (generate_csharp_project("src/MapDesigner/Application", "MapDesigner", "console", {}, {"src/FEEngine/FEEngine.csproj", "vendor/submodules/Newtonsoft.Json/Src/Newtonsoft.Json/Newtonsoft.Json.csproj"}, ".", path.getdirectory(_SCRIPT)))
+        dependson {
+            "MapDesigner-Internals"
         }
 project "MapDesigner-Internals"
     location "src/MapDesigner/Internals"
@@ -355,4 +362,6 @@ project "ExampleGame"
         links {
             "System"
         }
+    filter "system:not windows"
+        dotnet_project (generate_csharp_project("examples/ExampleGame", "ExampleGame", "console", {}, {"src/FEEngine/FEEngine.csproj"}, ".", path.getdirectory(_SCRIPT)))
 group ""

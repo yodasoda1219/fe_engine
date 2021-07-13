@@ -4,6 +4,28 @@ import platform
 import xml.etree.ElementTree as et
 import argparse
 import os, os.path
+class Element:
+    def __init__(self, tag: str, text: str = None):
+        self.tag = tag
+        self.text = text or ""
+    def copy_text_from_list(self, list: list[str]):
+        self.text = ""
+        for index in range(len(list)):
+            element = list[index]
+            if index != 0:
+                self.text += ";"
+            self.text += element
+class ElementSpec:
+    def __init__(self, definitions: list[str]):
+        self.elements = list[Element]()
+        self.add("LangVersion").text = "9.0"
+        self.add("Nullable").text = "enable"
+        self.add("AllowUnsafeBlocks").text = "true"
+        self.add("DefineConstants").copy_text_from_list(definitions or [])
+    def add(self, tag: str):
+        spec = Element(tag)
+        self.elements.append(spec)
+        return spec
 def add_defs(path: str, defs: list[str]) -> int:
     tree = et.parse(path)
     root = tree.getroot()
@@ -11,17 +33,14 @@ def add_defs(path: str, defs: list[str]) -> int:
     if not prop_group:
         print("Could not find a PropertyGroup element!")
         return 1
-    element = et.SubElement(prop_group, "DefineConstants")
-    element.text = ""
-    for index in range(len(defs or [])):
-        constant = defs[index]
-        if index != 0:
-            element.text += ";"
-        element.text += constant
+    spec = ElementSpec(defs)
+    for element in spec.elements:
+        xml_element = et.SubElement(prop_group, element.tag)
+        xml_element.text = element.text
     tree.write(path)
     return 0
 def cleanup_console(directory: str):
-    os.unlink(os.path.join(directory, "Program.cs"))
+    pass
 def cleanup_classlib(directory: str):
     os.unlink(os.path.join(directory, "Class1.cs"))
 def run(args: list[str]) -> int:
